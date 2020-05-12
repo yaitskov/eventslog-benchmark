@@ -11,7 +11,7 @@ export bytes=${bytes:-$[1024*1024]}
 
 for strategy in ${strategies:-LoadWithUnsafe LoadWithUnsafe8 LoadWithByteString8 LoadWithText LoadWithString} ; do
     export strategy
-    for threads in ${threads:-1 2 4 8 16 32} ; do
+    for threads in ${lthreads:-1 2 4 8 16 32} ; do
         export threads
         for chunk in ${chunks:-1 2 4 64 128 1024 2048 4096 8192} ; do
             export chunk

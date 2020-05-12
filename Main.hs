@@ -8,11 +8,13 @@ import Control.Monad
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as T
 import qualified Debug.Trace as TD
 import qualified Debug.Trace.ByteString as TBS
 import qualified Debug.Trace.Text as TT
 import qualified Formatting as F
+import Formatting ((%), (%.), left)
 import qualified Formatting.Clock as F
 import System.Clock
 import System.Environment
@@ -103,11 +105,11 @@ createChunk LoadWithByteString chunkSize =
 createChunk LoadWithText chunkSize =
     TextChunk $ T.replicate chunkSize "a"
 
-benchmark :: String -> Int -> LoadWith -> Int -> Int -> IO (TimeSpec, TimeSpec)
-benchmark name bytes strategy threads chunkSize = do
+benchmark :: Int -> LoadWith -> Int -> Int -> IO [(TimeSpec, TimeSpec)]
+benchmark bytes strategy threads chunkSize = do
   chunk <- return $ createChunk strategy chunkSize
   action <- return (runAction strategy chunk)
-  putStrLn $ "Chunks per thread " ++ show chunksPerThread ++ " for " ++ name
+  _ <- return chunksPerThread
   nTimeParRun threads (forM_ [1..chunksPerThread] $ \_ -> action)
   where
     chunksPerThread' = bytes `div` (chunkSize * threads)
@@ -115,19 +117,21 @@ benchmark name bytes strategy threads chunkSize = do
                       then chunksPerThread'
                       else error "Bytes is not divisible by chunkSize and threads"
 
-nTimeParRun :: Int -> IO () -> IO (TimeSpec, TimeSpec)
+nTimeParRun :: Int -> IO () -> IO [(TimeSpec, TimeSpec)]
 nTimeParRun n action = do
   startSem <- newQSem 0
   finishSem <- newQSem 0
   forM_ [1..n] $ \_ -> do
     forkIO $ do
       bracket_ (waitQSem startSem) (signalQSem finishSem) action
-  threadDelay 1000_000
-  startedAt <- getTime ProcessCPUTime
+  threadDelay 50_000
+  startedAt <- mapM getTime clocks
   forM_ [1..n] $ \_ -> signalQSem startSem
   forM_ [1..n] $ \_ -> waitQSem finishSem
-  endedAt <- getTime ProcessCPUTime
-  return (endedAt, startedAt)
+  endedAt <- mapM getTime clocks
+  return $ zip endedAt startedAt
+      where
+        clocks = [ProcessCPUTime, Realtime]
 
 main :: IO ()
 main = do
@@ -135,9 +139,14 @@ main = do
   bytes <- intEnvVar "bytes"
   threads <- intEnvVar "threads"
   chunkSize <- intEnvVar "chunk"
-  let name = show strategy ++ "-b" ++ show bytes ++ "-t"
-             ++ show threads ++ "-c" ++ show chunkSize
-  (endedAt, startedAt) <- benchmark name bytes strategy threads chunkSize
-  let tpl = ("benchmark [" F.% F.string F.% "] lasted for " F.% F.timeSpecs)
-  let out = F.format tpl name startedAt endedAt
+  let name :: TL.Text = F.format ((left 20 ' ' %. F.shown) % "-b"
+                            % (left 7 '0' %. F.int) % "-t"
+                                  % (left 3 '0' %. F.int) % "-c"
+                                        % (left 4 '0' %. F.int))
+              strategy bytes threads chunkSize
+  [(endedAtCpu, startedAtCpu), (endedAtReal, startedAtReal)]
+      <- benchmark bytes strategy threads chunkSize
+  let tpl = ("benchmark [" % F.text % "] lasted for cpu "
+                               % (left 10 ' ' %. F.timeSpecs) % " real " % F.timeSpecs)
+  let out = F.format tpl name startedAtCpu endedAtCpu startedAtReal endedAtReal
   T.putStrLn out
