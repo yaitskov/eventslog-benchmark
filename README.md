@@ -1,8 +1,8 @@
 # eventslog-benchmark
 
 Observation how eventslog file size footprint and execution time changes
-with variation of threads and chunk size with fixed data written
-into eventslog.
+with variation of threads and chunk size and message format
+(String, Text, ByteString, Unsafe) with fixed data written into eventslog.
 
 
 ```
