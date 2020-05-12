@@ -10,7 +10,7 @@ with variation of threads and chunk size and message format
 ./run-benchmarks.sh
 
 # specific
-threads=1 chunks="128 1024" ./run-benchmarks.sh
+lthreads=1 chunks="128 1024" ./run-benchmarks.sh
 ```
 
 ```
