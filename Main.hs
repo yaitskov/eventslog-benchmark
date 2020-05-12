@@ -107,15 +107,13 @@ createChunk LoadWithText chunkSize =
 
 benchmark :: Int -> LoadWith -> Int -> Int -> IO [(TimeSpec, TimeSpec)]
 benchmark bytes strategy threads chunkSize = do
-  chunk <- return $ createChunk strategy chunkSize
-  action <- return (runAction strategy chunk)
-  _ <- return chunksPerThread
+  let !chunk = createChunk strategy chunkSize
+  let !action = runAction strategy chunk
+  let chunksPerThread' = bytes `div` (chunkSize * threads)
+  let !chunksPerThread = if bytes `mod` (chunkSize * threads) == 0
+                         then chunksPerThread'
+                         else error "Bytes is not divisible by chunkSize and threads"
   nTimeParRun threads (forM_ [1..chunksPerThread] $ \_ -> action)
-  where
-    chunksPerThread' = bytes `div` (chunkSize * threads)
-    chunksPerThread = if bytes `mod` (chunkSize * threads) == 0
-                      then chunksPerThread'
-                      else error "Bytes is not divisible by chunkSize and threads"
 
 nTimeParRun :: Int -> IO () -> IO [(TimeSpec, TimeSpec)]
 nTimeParRun n action = do
