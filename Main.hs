@@ -12,6 +12,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as T
 import qualified Debug.Trace as TD
 import qualified Debug.Trace.ByteString as TBS
+import qualified Debug.Trace.Binary as TB
 import qualified Debug.Trace.Text as TT
 import qualified Formatting as F
 import Formatting ((%), (%.), left)
@@ -41,6 +42,7 @@ envVar name = do
       Nothing -> varIs name "not set"
 
 data LoadWith = LoadWithString
+              | LoadWithBinary
               | LoadWithByteString
               | LoadWithByteString8
               | LoadWithUnsafe8
@@ -75,6 +77,11 @@ runAction LoadWithUnsafe chunk =
       ByteStringChunk c -> TBS.unsafeTraceEventIO c
       _ -> error "oops"
 
+runAction LoadWithBinary chunk =
+    case chunk of
+      ByteStringChunk c -> TB.traceBinaryEventIO c
+      _ -> error "oops"
+
 runAction LoadWithByteString chunk =
     case chunk of
       ByteStringChunk c -> TBS.traceEventIO c
@@ -100,6 +107,9 @@ createChunk LoadWithUnsafe chunkSize =
     ByteStringChunk $ BS.replicate chunkSize 65
 
 createChunk LoadWithByteString chunkSize =
+    ByteStringChunk $ BS.replicate chunkSize 65
+
+createChunk LoadWithBinary chunkSize =
     ByteStringChunk $ BS.replicate chunkSize 65
 
 createChunk LoadWithText chunkSize =

@@ -9,7 +9,7 @@ run() {
 
 export bytes=${bytes:-$[1024*1024]}
 
-for strategy in ${strategies:-LoadWithUnsafe LoadWithUnsafe8 LoadWithByteString8 LoadWithText LoadWithString} ; do
+for strategy in ${strategies:-LoadWithBinary LoadWithUnsafe LoadWithUnsafe8 LoadWithByteString8 LoadWithText LoadWithString} ; do
     export strategy
     for threads in ${lthreads:-1 2 4 8 16 32} ; do
         export threads
