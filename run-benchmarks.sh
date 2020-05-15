@@ -4,7 +4,7 @@ stack install || { echo "build failed" ; exit 1 ; }
 
 run() {
     local name=$strategy-b$bytes-t$threads-c$chunk.eventlog
-    eventslog-benchmark +RTS -l -ol$name || { echo "failed on $name" ; exit 1 ; }
+    eventslog-benchmark +RTS -l-au -ol$name || { echo "failed on $name" ; exit 1 ; }
 }
 
 export bytes=${bytes:-$[1024*1024]}
